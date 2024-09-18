@@ -1,0 +1,11 @@
+root = true
+
+[*.{md,py,yml,yaml}]
+indent_style = space
+
+[*.py]
+indent_size = 4
+max_line_length = 80
+
+[*.{md,yml,yaml}]
+indent_size = 2

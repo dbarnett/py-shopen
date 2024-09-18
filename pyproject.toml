@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shopen"
+dynamic = ["version"]
+description = 'Proper implementation of os.startfile to launch a target file/URL'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = [
+  "os",
+]
+authors = [
+  { name = "David Barnett", email = "david@mumind.me" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/dbarnett/py-shopen#readme"
+Issues = "https://github.com/dbarnett/py-shopen/issues"
+Source = "https://github.com/dbarnett/py-shopen"
+
+[project.optional-dependencies]
+dev = [
+  "pytest-mock",
+  "pytest-subprocess",
+]
+
+[tool.hatch.version]
+path = "src/shopen/__about__.py"
+
+[tool.hatch.envs.hatch-test]
+features = ["dev"]
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/shopen tests}"
+
+[tool.coverage.run]
+source_pkgs = ["shopen", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/shopen/__about__.py",
+]
+
+[tool.coverage.paths]
+shopen = ["src/shopen", "*/shopen/src/shopen"]
+tests = ["tests", "*/shopen/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.ruff]
+line-length = 80
+
+[tool.ruff.lint]
+# Enable Errors, Warnings, Flakes
+select = ["E", "W", "F"]
