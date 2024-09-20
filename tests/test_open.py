@@ -5,12 +5,17 @@ from typing import Optional
 from unittest.mock import Mock
 
 import pytest
-from pytest_mock import MockerFixture
-from pytest_subprocess.fake_process import FakeProcess
+from pytest_mock import MockerFixture  # type: ignore
+from pytest_subprocess.fake_process import FakeProcess  # type: ignore
 
 import shopen
 
-from .testutil import assert_calls, no_such_command_callback, register_openers
+from .testutil import (
+    assert_cmd_call,
+    assert_cmd_calls,
+    no_such_command_callback,
+    register_openers,
+)
 
 
 @pytest.fixture
@@ -37,11 +42,11 @@ def test_empty():
     sys.platform != "win32", reason="os.startfile currently only supports win32"
 )
 def test_os_startfile(
-    tmpfile: pathlib.Path, os_startfile: Optional[Mock], fp: FakeProcess
+    tmpfile: pathlib.Path, os_startfile: Mock, fp: FakeProcess
 ):
-    shopen.open(tmpfile)
-    os_startfile.assert_called_once()
-    assert_calls([], fp)
+    shopen.open(tmpfile, "open")
+    os_startfile.assert_called_once_with(tmpfile, "open")
+    assert not fp.calls
 
 
 @pytest.mark.skipif(
@@ -49,8 +54,8 @@ def test_os_startfile(
 )
 def test_plat_darwin_open(tmpfile: pathlib.Path, fp: FakeProcess):
     register_openers(fp, ["open"])
-    shopen.open(tmpfile)
-    assert_calls([("open",)], fp)
+    shopen.open(tmpfile, "open")
+    assert_cmd_calls(["open"], fp)
 
 
 @pytest.mark.skipif(
@@ -59,8 +64,8 @@ def test_plat_darwin_open(tmpfile: pathlib.Path, fp: FakeProcess):
 )
 def test_plat_linux_etc_xdg_open(tmpfile: pathlib.Path, fp: FakeProcess):
     register_openers(fp, ["xdg-open"])
-    shopen.open(tmpfile)
-    assert_calls([("xdg-open",)], fp)
+    shopen.open(tmpfile, "open")
+    assert_cmd_calls(["xdg-open"], fp)
 
 
 @pytest.mark.skipif(
@@ -71,11 +76,22 @@ def test_plat_linux_etc_open(tmpfile: pathlib.Path, fp: FakeProcess):
     """If xdg-open isn't available, runs the `open` command."""
     fp.register(["xdg-open", fp.any()], callback=no_such_command_callback)
     register_openers(fp, ["open"])
+    shopen.open(tmpfile, "open")
+    assert_cmd_calls(["xdg-open", "open"], fp)
+
+
+def test_default_op_open(
+    tmpfile: pathlib.Path, os_startfile: Mock, fp: FakeProcess
+):
+    register_openers(fp)
     shopen.open(tmpfile)
-    assert_calls([("xdg-open",), ("open",)], fp)
+    if sys.platform == "win32":
+        os_startfile.assert_called_once()
+    else:
+        assert_cmd_call({"xdg-open", "open"}, fp)
 
 
-def test_open_string(
+def test_string_path(
     tmpfile: pathlib.Path, os_startfile: Mock, fp: FakeProcess
 ):
     register_openers(fp)
@@ -83,4 +99,4 @@ def test_open_string(
     if sys.platform == "win32":
         os_startfile.assert_called_once()
     else:
-        assert any(c and c[0] in {"xdg-open", "open"} for c in fp.calls)
+        assert_cmd_call({"xdg-open", "open"}, fp)
