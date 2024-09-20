@@ -1,4 +1,4 @@
-/src/shopen/__about__.py
+/src/shopen/_version.py
 
 *.pyc
 build/

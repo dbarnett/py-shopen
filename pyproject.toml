@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -40,12 +40,15 @@ dev = [
 ]
 
 [tool.hatch.version]
-path = "src/shopen/__about__.py"
+source = "vcs"
 
 [tool.hatch.build]
 exclude = [
   ".git*"
 ]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/shopen/_version.py"
 
 [tool.hatch.envs.hatch-test]
 features = ["dev"]
