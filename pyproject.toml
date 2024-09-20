@@ -42,6 +42,11 @@ dev = [
 [tool.hatch.version]
 path = "src/shopen/__about__.py"
 
+[tool.hatch.build]
+exclude = [
+  ".git*"
+]
+
 [tool.hatch.envs.hatch-test]
 features = ["dev"]
 
