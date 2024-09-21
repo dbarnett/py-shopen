@@ -93,5 +93,6 @@ jobs:
         run: hatch build
       - name: Publish on PyPI
         env:
+          HATCH_INDEX_USER: dbarnett
           HATCH_INDEX_CLIENT_KEY: ${{ secrets.PYPI_API_TOKEN }}
         run: hatch publish
