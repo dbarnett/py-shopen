@@ -1,94 +1,56 @@
-import os
-import pathlib
 import sys
-from typing import Optional
-from unittest.mock import Mock
 
 import pytest
-from pytest_mock import MockerFixture
-from pytest_subprocess import FakeProcess
 
 import shopen
 
-from .testutil import no_such_command_callback, register_openers
 
-
-@pytest.fixture
-def tmpfile(tmp_path: pathlib.Path):
-    somefile = tmp_path.joinpath("somefile.txt")
-    somefile.touch()
-    return somefile
-
-
-@pytest.fixture
-def os_startfile(mocker: MockerFixture) -> Optional[Mock]:
-    if not hasattr(os, "startfile"):
-        return None
-    mocker.patch("os.startfile")
-    return os.startfile
-
-
-def test_empty():
+def test_empty(mocked_openers):
+    mocked_openers.mock_all()
     with pytest.raises(TypeError):
         shopen.open(operation="edit")
+    mocked_openers.verify_no_interactions()
 
 
-@pytest.mark.skipif(
-    sys.platform != "win32", reason="os.startfile currently only supports win32"
-)
-def test_os_startfile(
-    tmpfile: pathlib.Path, os_startfile: Mock, fp: FakeProcess
-):
+def test_simple_success(mocked_openers, tmpfile):
+    mocked_openers.mock_all()
     shopen.open(tmpfile, "edit")
-    os_startfile.assert_called_once_with(tmpfile, "edit")
-    assert not fp.calls
+    if sys.platform == "win32":
+        mocked_openers.os_startfile.assert_called_once_with(tmpfile, "edit")
+        assert not mocked_openers.fp.calls
+    else:
+        assert ["editor", tmpfile] in mocked_openers.fp.calls
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="testing non-Windows scenarios"
+    sys.platform == "win32", reason="testing non-Windows env scenario"
 )
-def test_plat_nonwindows_editor(tmpfile: pathlib.Path, fp: FakeProcess):
-    register_openers(fp, ["editor"])
-    shopen.open(tmpfile, "edit")
-    assert ["editor", tmpfile] in fp.calls
-
-
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="testing non-Windows scenarios"
-)
-def test_plat_nonwindows_env(
-    tmpfile: pathlib.Path, monkeypatch: pytest.MonkeyPatch, fp: FakeProcess
-):
-    fp.register(["editor", fp.any()], callback=no_such_command_callback)
+def test_plat_nonwindows_env(mocked_openers, tmpfile, monkeypatch):
+    mocked_openers.mock_os_startfile()
+    mocked_openers.mock_processes({"editor": False, "someeditor": True})
     monkeypatch.setenv("EDITOR", "someeditor")
-    fp.register(["someeditor", fp.any()])
     shopen.open(tmpfile, "edit")
-    assert ["someeditor", tmpfile] in fp.calls
+    assert ["someeditor", tmpfile] in mocked_openers.fp.calls
 
 
 @pytest.mark.skipif(
-    sys.platform in ("win32", "darwin"),
+    sys.platform in {"win32", "darwin"},
     reason="testing platform-specific behavior for linux, etc",
 )
-def test_plat_nonwindows_xdg_open(
-    tmpfile: pathlib.Path, monkeypatch: pytest.MonkeyPatch, fp: FakeProcess
-):
-    fp.register(["editor", fp.any()], callback=no_such_command_callback)
+def test_plat_nonwindows_xdg_open(mocked_openers, tmpfile, monkeypatch):
+    mocked_openers.mock_processes({"editor": False, "xdg-open": True})
     monkeypatch.delenv("EDITOR", raising=False)
-    register_openers(fp, ["xdg-open"])
     shopen.open(tmpfile, "edit")
-    assert ["xdg-open", tmpfile] in fp.calls
+    assert ["xdg-open", tmpfile] in mocked_openers.fp.calls
 
 
 @pytest.mark.skipif(
     sys.platform == "win32", reason="testing non-Windows scenarios"
 )
-def test_plat_nonwindows_open(
-    tmpfile: pathlib.Path, monkeypatch: pytest.MonkeyPatch, fp: FakeProcess
-):
-    fp.register(["editor", fp.any()], callback=no_such_command_callback)
+def test_plat_nonwindows_open(mocked_openers, tmpfile, monkeypatch):
+    mocked_openers.mock_processes(
+        {"editor": False, "xdg-open": False, "open": True}
+    )
     monkeypatch.delenv("EDITOR", raising=False)
-    fp.register(["xdg-open", fp.any()], callback=no_such_command_callback)
-    register_openers(fp, ["open"])
     shopen.open(tmpfile, "edit")
-    assert ["open", tmpfile] in fp.calls
+    assert ["open", tmpfile] in mocked_openers.fp.calls
