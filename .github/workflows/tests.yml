@@ -1,4 +1,4 @@
-name: Python tests
+name: Tests, lints
 
 on:
   push:
@@ -13,6 +13,33 @@ permissions:
   contents: read
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        py:
+          - "3.8"
+          - "3.12"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py }}
+      - name: Set up pip cache
+        if: runner.os == 'Linux'
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+      - name: Install Hatch
+        run: pipx install hatch
+      - name: Check types
+        run: hatch run types:check
+      - name: Run lint
+        run: hatch run lint:check
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:

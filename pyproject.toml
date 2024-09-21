@@ -54,6 +54,14 @@ version-file = "src/shopen/_version.py"
 [tool.hatch.envs.hatch-test]
 features = ["dev"]
 
+[tool.hatch.envs.lint]
+extra-dependencies = [
+  "ruff",
+]
+[tool.hatch.envs.lint.scripts]
+check = "ruff check {args:src/shopen tests}"
+fix = "ruff check --select I --fix {args:src/shopen tests}"
+
 [tool.hatch.envs.types]
 features = ["dev"]
 extra-dependencies = [
